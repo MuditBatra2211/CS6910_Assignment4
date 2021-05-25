@@ -14,7 +14,7 @@ from sklearn.model_selection import train_test_split
 #setting hyperparameter values
 
 method_of_rbm = 'Contrastive Divergence'   # put 'Gibbs sampling' for block sampling algorithm and 'Contrastive Divergence' for cd algorithm.
-lr = 0.01
+lr = 0.01               #[0.001, 0.01, 0.1]
 hidden_dim = 256        #[64, 128, 256]
 steps_Gibbs = 10        #for contrastive divergence [1,5,10]
 max_epochs = 1          # 100 for Contrastive Divergence and 10 for Block Gibbs Sampling
