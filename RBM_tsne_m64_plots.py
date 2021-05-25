@@ -174,3 +174,81 @@ class RBM(object):
 
 #=================================================================================================================#
 #Creating Object   
+rbm = RBM(visible_dim, hidden_dim)
+time_step = 0 
+image = 0
+flag = 0
+time_instant = int(np.floor(example*max_epochs/(64+1))) #instant at all m/64 images will be taken
+
+from matplotlib import pyplot as plt
+fig= plt.subplots(8, 8, figsize=(10,10))
+#=================================================================================================================#
+# main algorithm starts here
+
+for epoch in range(max_epochs):
+  for i in range(example):
+      rbm.contrastive_divergence(lr=lr, k=steps_Gibbs, input=trainData[i:i+1])
+      time_step +=1
+      if (time_step%time_instant == 0):
+        flag +=1
+        # Computing hidden and reconstructed representation at each m/64 step
+        train_hidden_rep, reconstructed_train = rbm.get_reconstructed_image(trainData[0:example])
+        valid_hidden_rep, reconstructed_valid = rbm.get_reconstructed_image(validData[0:valid_example])
+        test_hidden_rep, reconstructed_test = rbm.get_reconstructed_image(testData[0:test_example])
+
+        random_image = reconstructed_valid[2] # Taking a random example from Validation reconstructed data, as data is shuffled previously
+        random_image = random_image.reshape(28,28)      
+        plt.imshow(random_image, interpolation='nearest')
+        plt.axis('off')
+        image = image+1
+        if (flag<=64):
+          plt.subplot(8, 8, image)
+
+  training_loss = rbm.get_reconstruction_loss(input=trainData[0:example])
+  print('Training epoch %d' % epoch)
+  print('Training Loss: ',training_loss)
+  
+
+  logistic_regression= LogisticRegression(max_iter=2000)
+  logistic_regression.fit(valid_hidden_rep,validLabel[0:valid_example])
+  y_pred_probs = logistic_regression.predict_proba(test_hidden_rep)
+  y_pred = logistic_regression.predict(test_hidden_rep)
+  Test_Accuracy = metrics.accuracy_score(y_pred, testLabel[:test_example])*100
+  Test_Loss = metrics.log_loss(testLabel[:test_example], y_pred_probs)
+  print("Accuracy: ",metrics.accuracy_score(y_pred, testLabel[:test_example])*100)
+  print("Test Loss: ",metrics.log_loss(testLabel[:test_example], y_pred_probs))
+  print("-------------------------------------------------------")
+  del y_pred,y_pred_probs,logistic_regression, train_hidden_rep, reconstructed_train, valid_hidden_rep, reconstructed_valid, reconstructed_test
+plt.savefig('Image from m_by_64.png')
+
+#=================================================================================================================#
+# TSNE Plots without PCA
+x_subset = test_hidden_rep
+y_subset = testLabel[0:test_example]
+
+from sklearn import datasets
+from sklearn.manifold import TSNE
+tsne = TSNE(random_state = 40, n_components=2,verbose=0, perplexity=40, n_iter=300).fit_transform(x_subset)
+plt.scatter(tsne[:, 0], tsne[:, 1], s= 20, c=y_subset, cmap='tab10')
+plt.gca().set_aspect('equal', 'datalim')
+plt.colorbar(boundaries=np.arange(11)-0.5).set_ticks(np.arange(10))
+plt.title('Visualizing MNIST on Test Data through t-SNE (without PCA)');
+plt.savefig('Tsne_wo_pca.png')
+plt.close()
+
+#=================================================================================================================#
+# TSNE Plots with PCA
+from sklearn.decomposition import PCA
+PCA_dimension = 50
+pca_50 = PCA(n_components=PCA_dimension)
+pca_result_50 = pca_50.fit_transform(x_subset)
+
+pca_tsne = TSNE(random_state = 40, n_components=2, verbose=0, perplexity=40, n_iter=300).fit_transform(pca_result_50)
+
+#visualising t-SNE again 
+
+plt.scatter(pca_tsne[:, 0], pca_tsne[:, 1], s= 20, c=y_subset, cmap='tab10')
+plt.gca().set_aspect('equal', 'datalim')
+plt.colorbar(boundaries=np.arange(11)-0.5).set_ticks(np.arange(10))
+plt.title('Visualizing MNIST through t-SNE (PCA_50)');
+plt.savefig('Tsne_pca_50.png')
